@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class ClectingItems : MonoBehaviour
 {
-    [SerializeField] GameObject ButtonGroup;
+    [SerializeField] GameObject Panel;
     [SerializeField] GameObject Button1;
     [SerializeField] GameObject Button2;
     [SerializeField] GameObject Button3;
@@ -17,7 +17,7 @@ public class ClectingItems : MonoBehaviour
     void Start()
     {
         
-        ButtonGroup.SetActive(false);
+        Panel.SetActive(false);
         
     }
 
@@ -33,8 +33,8 @@ public class ClectingItems : MonoBehaviour
 
 
 
-            ButtonGroup.SetActive(true);
-            //Button1.SetActive(true);
+            Panel.SetActive(true);
+            Button1.SetActive(true);
         }
 
     }
@@ -44,8 +44,8 @@ public class ClectingItems : MonoBehaviour
         if (other.gameObject.CompareTag("Player"))
         {
 
-            ButtonGroup.SetActive(true);
-           // Button1.SetActive(true);
+            Panel.SetActive(true);
+            Button1.SetActive(true);
         }
     }
 
@@ -57,8 +57,8 @@ public class ClectingItems : MonoBehaviour
         {
 
 
-            ButtonGroup.SetActive(false);
-            //Button1.SetActive(false);
+            Panel.SetActive(false);
+            Button1.SetActive(false);
         }
     }
 
