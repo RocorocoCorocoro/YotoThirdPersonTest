@@ -181,17 +181,56 @@ namespace StarterAssets
 
         private void GroundedCheck()
         {
-            // set sphere position, with offset
-            Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset,
-                transform.position.z);
-            Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers,
-                QueryTriggerInteraction.Ignore);
+            //テレインをGroundレイヤーにしたらいきなり「わたしは神だ」になってしまう問題でAIが教えてくれたのがこれ
+            // スフィアの位置を計算（キャラクターの中心位置にオフセットを加える）
+            Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z);
 
-            // update animator if using character
+            // 地面と接触しているか判定
+            Collider[] colliders = Physics.OverlapSphere(spherePosition, GroundedRadius, GroundLayers, QueryTriggerInteraction.Ignore);
+
+            // 接触している場合のみGroundedをtrueに設定
+            Grounded = colliders.Length > 0;
+
+            // アニメーターの更新
             if (_hasAnimator)
             {
                 _animator.SetBool(_animIDGrounded, Grounded);
             }
+
+
+
+
+
+
+
+            //以下はもとのスクリプト
+            //// set sphere position, with offset
+            //Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset,
+            //    transform.position.z);
+            //Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers,
+            //    QueryTriggerInteraction.Ignore);
+
+            //// update animator if using character
+            //if (_hasAnimator)
+            //{
+            //    _animator.SetBool(_animIDGrounded, Grounded);
+            //}
+        }
+
+
+        //
+        // OnDrawGizmosSelected メソッドを追加
+        private void OnDrawGizmosSelected()
+        {
+            // Scene ビューでデバッグ用のスフィアを描画
+
+            // 地面にいる場合は緑、空中の場合は赤
+            Gizmos.color = Grounded ? Color.green : Color.red;
+
+            // GroundedCheck のスフィアの範囲を描画
+            Gizmos.DrawSphere(
+                new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z),
+                GroundedRadius);
         }
 
         private void CameraRotation()
@@ -287,64 +326,83 @@ namespace StarterAssets
         {
             if (Grounded)
             {
-                // reset the fall timeout timer
+                // reset the fall timeout timer（着地している時にタイマーをリセットする）
                 _fallTimeoutDelta = FallTimeout;
 
-                // update animator if using character
+                // update animator if using character（アニメーションの更新）
                 if (_hasAnimator)
                 {
-                    _animator.SetBool(_animIDJump, false);
-                    _animator.SetBool(_animIDFreeFall, false);
+                    _animator.SetBool(_animIDJump, false);//ジャンプアニメーションをオフ
+                    _animator.SetBool(_animIDFreeFall, false);//空中アニメーションをオフ
                 }
 
-                // stop our velocity dropping infinitely when grounded
+                // stop our velocity dropping infinitely when grounded（垂直速度をリセット。地面に安定する）
                 if (_verticalVelocity < 0.0f)
                 {
                     _verticalVelocity = -2f;
                 }
 
-                // Jump
+                // Jump（ジャンプ入力がある場合のみジャンプ）
                 if (_input.jump && _jumpTimeoutDelta <= 0.0f)
                 {
+                    //必要な上方向の速度を計算
                     // the square root of H * -2 * G = how much velocity needed to reach desired height
                     _verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
 
-                    // update animator if using character
+                    // update animator if using character（ジャンプアニメーションの開始）
                     if (_hasAnimator)
                     {
                         _animator.SetBool(_animIDJump, true);
                     }
                 }
 
-                // jump timeout
+                // jump timeout（ジャンプタイマーの減少）
                 if (_jumpTimeoutDelta >= 0.0f)
                 {
                     _jumpTimeoutDelta -= Time.deltaTime;
                 }
             }
-            else
+
+            else//この下の部分がAIが教えてくれたとこ★★
             {
-                // reset the jump timeout timer
-                _jumpTimeoutDelta = JumpTimeout;
+                //空中にいる場合
+                _fallTimeoutDelta = Mathf.Max(0.0f, _fallTimeoutDelta- Time.deltaTime);//落下タイマーを減少
 
-                // fall timeout
-                if (_fallTimeoutDelta >= 0.0f)
-                {
-                    _fallTimeoutDelta -= Time.deltaTime;
-                }
-                else
-                {
-                    // update animator if using character
-                    if (_hasAnimator)
-                    {
-                        _animator.SetBool(_animIDFreeFall, true);
-                    }
-                }
-
-                // if we are not grounded, do not jump
+                //ジャンプを無効化
                 _input.jump = false;
+
+                // update animator if using character（アニメーションの更新）
+                if (_hasAnimator)
+                {
+                    _animator.SetBool(_animIDFreeFall, true);//空中アニメーションを開始
+                }
             }
 
+            //このelseから下がAIが教えてくれたのと違っている部分があるので書き直したのが上
+            //else
+            //{
+            //    // reset the jump timeout timer
+            //    _jumpTimeoutDelta = JumpTimeout;
+
+            //    // fall timeout
+            //    if (_fallTimeoutDelta >= 0.0f)
+            //    {
+            //        _fallTimeoutDelta -= Time.deltaTime;
+            //    }
+            //    else
+            //    {
+            //        // update animator if using character（アニメーションの更新）
+            //        if (_hasAnimator)
+            //        {
+            //            _animator.SetBool(_animIDFreeFall, true);//空中アニメーションを開始
+            //        }
+            //    }
+
+            //    // if we are not grounded, do not jump（ジャンプを無効化）
+            //    _input.jump = false;
+            //}
+
+            //重力を適用（端末速度を考慮）
             // apply gravity over time if under terminal (multiply by delta time twice to linearly speed up over time)
             if (_verticalVelocity < _terminalVelocity)
             {
@@ -359,19 +417,6 @@ namespace StarterAssets
             return Mathf.Clamp(lfAngle, lfMin, lfMax);
         }
 
-        private void OnDrawGizmosSelected()
-        {
-            Color transparentGreen = new Color(0.0f, 1.0f, 0.0f, 0.35f);
-            Color transparentRed = new Color(1.0f, 0.0f, 0.0f, 0.35f);
-
-            if (Grounded) Gizmos.color = transparentGreen;
-            else Gizmos.color = transparentRed;
-
-            // when selected, draw a gizmo in the position of, and matching radius of, the grounded collider
-            Gizmos.DrawSphere(
-                new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z),
-                GroundedRadius);
-        }
 
         private void OnFootstep(AnimationEvent animationEvent)
         {
